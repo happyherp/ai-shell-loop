@@ -20,8 +20,8 @@ while True:
     command = response.choices[0].message.content
     print("Command raw", command)
     if (END == command): break
-    command = command.lstrip("```sh").rstrip("```")
-    print("clean", command)
+    command = command.lstrip("```sh\r\n").rstrip("```")
+    print("command", command)
     messages.append({"role": "assistant", "content": response.choices[0].message.content})
 
     result = subprocess.run(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, shell=True)
