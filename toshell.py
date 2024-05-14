@@ -18,10 +18,10 @@ messages=[{"role": "system", "content": "You are a helpful assistant."},
 while True:
     response = client.chat.completions.create(model="gpt-4o", messages=messages)
     command = response.choices[0].message.content
-    print("Command raw", command)
+    #print("Command raw", command)
     if (END == command): break
     command = command.lstrip("```sh\r\n").rstrip("```")
-    print("command", command)
+    print("COMMAND>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>\\n", command)
     messages.append({"role": "assistant", "content": response.choices[0].message.content})
 
     result = subprocess.run(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, shell=True)
@@ -31,8 +31,10 @@ while True:
     # Get the standard error (stderr), if needed
     errors = result.stderr
 
-    print("output:", output)
-    print("Errors:", errors)
+    print("<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<OUTPUT\n:", output)
+    
+    if errors != "":
+        print("<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<Errors:\n", errors)
 
     messages.append({"role":"user", "content":
         "Output: "+output+"\\nErrors"+errors+"\\n Enter next command:"})
