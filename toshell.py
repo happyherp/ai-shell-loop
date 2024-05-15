@@ -4,7 +4,10 @@ import sys, json, os
 
 END = "I AM DONE!"
 
-with open("openai.key", 'r') as file:
+script_dir = os.path.dirname(os.path.abspath(__file__))
+file_path = os.path.join(script_dir,  './openai.key')
+
+with open(file_path, 'r') as file:
     api_key = file.read()
 
 client = OpenAI(api_key=api_key)
@@ -38,27 +41,29 @@ while True:
     print(obj["plan"])
     command = obj["command"]
     #print("Command raw", command)
+    messages.append({"role": "assistant", "content": response.choices[0].message.content})
+    if (END == command): break
     command = "cd "+obj["directory"]+ " && " + command
     print("COMMAND>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>> in", obj["directory"])
     print(command)
-    messages.append({"role": "assistant", "content": response.choices[0].message.content})
-    if (END == command): break
+    userinput = input("continue?(no, new command)")
+    if userinput == "no": break
+    if userinput != "":
+        messages.append({"role":"user", "content":"Your last command was cancelled by the user. He says: "+userinput})
+    else:
+        result = subprocess.run(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, shell=True)
 
-    if input("continue?(no)") == "no": break
+        output = result.stdout
+        errors = result.stderr
 
-    result = subprocess.run(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, shell=True)
-
-    output = result.stdout
-    errors = result.stderr
-
-    print("<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<OUTPUT:\n", output)
-    
-    responseContent = "stdout:\n"+output+"\n"
-    if errors != "":
-        print("<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<Errors:\n", errors)
-        responseContent += "stderr:\n"+errors+"\n "
-
-    messages.append({"role":"user", "content": responseContent})
+        print("<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<OUTPUT:\n", output)
+        
+        responseContent = "Return Code: "+str(result.returncode)
+        responseContent += "\nstdout:\n"+output+"\n"
+        if errors != "":
+            print("<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<Errors:\n", errors)
+            responseContent += "stderr:\n"+errors+"\n "
+        messages.append({"role":"user", "content": responseContent})
 
 
 print("Loop finished. ")
