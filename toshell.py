@@ -32,10 +32,14 @@ messages=[{"role": "system", "content": "You are a helpful assistant."},
           The content of "command" will be sent to the shell and you will receive the stdout and stderr. 
           
           """.format(goal=goal, end=END)}]
+          
+total_tokens = 0
 while True:
     response = client.chat.completions.create(model="gpt-4o", messages=messages, 
         response_format={ "type": "json_object" }
     )
+    total_tokens += response.usage.total_tokens
+    print("Tokens: ", response.usage.total_tokens, "Total: ", total_tokens)
     obj = json.loads(response.choices[0].message.content)
     print("PLAN>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>\n")
     print(obj["plan"])
