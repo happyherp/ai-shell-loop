@@ -1,4 +1,5 @@
 from openai import OpenAI
+from typing import Optional
 import subprocess
 import sys, json, os
 from describe import describe
@@ -23,6 +24,16 @@ class ResponseContent(BaseModel):
     directory:str = Field(description="the absolute path in which the command should be executed")
     command:str = Field(description="the shell to be executed to achieve the goal")
 
+class Iteration(BaseModel):
+    ai:ResponseContent
+    userinput:str
+    shellOutput:Optional[str] = None
+
+def systemMsg(content): return msg("system", content)
+def userMsg(content): return msg("user", content)
+def assistantMsg(content):  return msg("assistant", content)
+def msg(role, content):  return {"role": role, "content": content}
+
 mainPrompt="""
 Your goal is:  {goal}. You are connected to a linux shell. You 
 can pass commends to the shell to achieve the goal.
@@ -36,12 +47,23 @@ The content of "command" will be sent to the shell and you will receive the stdo
 
 """.format(goal=goal, end=END, schema=describe(ResponseContent))
 
-messages=[{"role": "system", "content": "You are a helpful assistant."},
-          {"role": "user", "content": mainPrompt}]
-print(messages)          
+messages=[systemMsg("You are a helpful assistant."), userMsg(mainPrompt)]
+
 total_tokens = 0
+iterations = []
+
+
+def fromIterations():
+
+    content = "Previous iterations:[\n"
+    for i in iterations:
+        content+= i.json()+"\n"    
+    content += "]"
+
+    return [systemMsg("You are a helpful assistant."), userMsg(mainPrompt), userMsg(content)]
+
 while True:
-    response = client.chat.completions.create(model="gpt-4o", messages=messages, 
+    response = client.chat.completions.create(model="gpt-4o", messages=fromIterations(), 
         response_format={ "type": "json_object" }
     )
     total_tokens += response.usage.total_tokens
@@ -51,15 +73,16 @@ while True:
     print(obj.plan)
     command = obj.command
     #print("Command raw", command)
-    messages.append({"role": "assistant", "content": response.choices[0].message.content})
+    messages.append(assistantMsg(response.choices[0].message.content))
     if (END == command): break
     command = "cd "+obj.directory+ " && " + command
     print("COMMAND>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>> in", obj.directory)
     print(command)
+    responseContent=None
     userinput = input("continue?(no, new command)")
     if userinput == "no": break
     if userinput != "":
-        messages.append({"role":"user", "content":"Your last command was cancelled by the user. He says: "+userinput})
+        messages.append(userMsg("Your last command was cancelled by the user. He says: "+userinput))
     else:
         result = subprocess.run(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, shell=True)
 
@@ -73,7 +96,8 @@ while True:
         if errors != "":
             print("<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<Errors:\n", errors)
             responseContent += "stderr:\n"+errors+"\n "
-        messages.append({"role":"user", "content": responseContent})
+        messages.append(userMsg(responseContent))
+    iterations.append(Iteration(ai=obj, userinput=userinput, shellOutput=responseContent))
 
 
 print("Loop finished. ")
