@@ -26,17 +26,21 @@ class Iteration(BaseModel):
 
 
 mainPrompt="""
-Your goal is:  {goal}. You are connected to a linux shell. You 
+Your goal is:  {goal}. You are connected to a terminal. You 
 can pass commends to the shell to achieve the goal.
 You will get both the stdout and stderr streams back as a response. Use this to interact with the shell, to achieve your goal. 
 Once you see by the response, that you are done, respond with the command `{end}` to indicate that you are finished. 
 Do not try to use any interactive editors, like nano.
 
+Current Directory: {current_directory}
+Username: {username}
+
 {schema}
 
 The content of "command" will be sent to the shell and you will receive the stdout and stderr. 
 
-""".format(goal=goal, end=END, schema=describe(ResponseContent))
+""".format(goal=goal, end=END, schema=describe(ResponseContent), current_directory=os.getcwd(),
+    username=os.getlogin())
 
 messages=[systemMsg("You are a helpful assistant."), userMsg(mainPrompt)]
 
@@ -56,7 +60,7 @@ def fromIterations():
     for i in iterations[-maxIterationsInHistory:]:
         small = copy.deepcopy(i)
         small.shellOutput = reduceShelloutput(small.shellOutput)
-        content += small.json()+"\n"    
+        content += small.model_dump_json()+"\n"    
     content += "]"
 
     return [systemMsg("You are a helpful assistant."), userMsg(mainPrompt), userMsg(content)]
@@ -78,7 +82,7 @@ while True:
     )
     total_tokens += response.usage.total_tokens
     print("Tokens: ", response.usage.total_tokens, "Total: ", total_tokens)
-    obj = ResponseContent.parse_raw(response.choices[0].message.content)
+    obj = ResponseContent.model_validate_json(response.choices[0].message.content)
     print("PLAN>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>\n")
     print(obj.plan)
     command = obj.command
