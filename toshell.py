@@ -67,7 +67,7 @@ def fromIterations():
 
 def reduceShelloutput(text):
     if not text: return text
-    maxSize = 80*1
+    maxSize = 80*10
     extraChars = len(text) - maxSize
     if extraChars > 0:
         return text[:maxSize//2]+ "<< {0} chars skipped>>".format(extraChars)+text[-maxSize//2:]
