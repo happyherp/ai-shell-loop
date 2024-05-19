@@ -1,7 +1,7 @@
 from openai import OpenAI
 from typing import Optional
 import subprocess
-import sys, json, os
+import sys, json, os, copy
 from describe import describe
 
 END = "I AM DONE!"
@@ -55,14 +55,33 @@ iterations = []
 
 def fromIterations():
 
-    content = "Previous iterations:[\n"
-    for i in iterations:
-        content+= i.json()+"\n"    
+    maxIterationsInHistory = 15
+
+    content = ""
+    if len(iterations) > maxIterationsInHistory:
+        content += (len(iterations)-maxIterationsInHistory) + " iterations skipped.\n "
+    
+    content += "Previous iterations:[\n"
+    for i in iterations[-maxIterationsInHistory:]:
+        small = copy.deepcopy(i)
+        small.shellOutput = reduceShelloutput(small.shellOutput)
+        content += small.json()+"\n"    
     content += "]"
 
     return [systemMsg("You are a helpful assistant."), userMsg(mainPrompt), userMsg(content)]
 
+def reduceShelloutput(text):
+    if not text: return text
+    maxSize = 80*1
+    extraChars = len(text) - maxSize
+    if extraChars > 0:
+        return text[:maxSize//2]+ "<< {0} chars skipped>>".format(extraChars)+text[-maxSize//2:]
+    else: 
+        return text
+        
+
 while True:
+    #print("messages: ", fromIterations())
     response = client.chat.completions.create(model="gpt-4o", messages=fromIterations(), 
         response_format={ "type": "json_object" }
     )
