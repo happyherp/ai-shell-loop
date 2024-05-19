@@ -3,16 +3,11 @@ from typing import Optional
 import subprocess
 import sys, json, os, copy
 from describe import describe
+from util import * 
 
 END = "I AM DONE!"
 
-script_dir = os.path.dirname(os.path.abspath(__file__))
-file_path = os.path.join(script_dir,  './openai.key')
-
-with open(file_path, 'r') as file:
-    api_key = file.read()
-
-client = OpenAI(api_key=api_key)
+client = createClient()
 
 
 goal = sys.argv[1]
@@ -29,10 +24,6 @@ class Iteration(BaseModel):
     userinput:str
     shellOutput:Optional[str] = None
 
-def systemMsg(content): return msg("system", content)
-def userMsg(content): return msg("user", content)
-def assistantMsg(content):  return msg("assistant", content)
-def msg(role, content):  return {"role": role, "content": content}
 
 mainPrompt="""
 Your goal is:  {goal}. You are connected to a linux shell. You 
