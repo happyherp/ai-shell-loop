@@ -1,6 +1,6 @@
 from openai import OpenAI
 from typing import Optional
-import subprocess
+import subprocess, getpass
 import sys, json, os, copy
 from describe import describe
 from util import * 
@@ -40,7 +40,7 @@ Username: {username}
 The content of "command" will be sent to the shell and you will receive the stdout and stderr. 
 
 """.format(goal=goal, end=END, schema=describe(ResponseContent), current_directory=os.getcwd(),
-    username=os.getlogin())
+    username = getpass.getuser())
 
 messages=[systemMsg("You are a helpful assistant."), userMsg(mainPrompt)]
 
@@ -107,7 +107,7 @@ while True:
         
         responseContent = "Return Code: "+str(result.returncode)
         responseContent += "\nstdout:\n"+output+"\n"
-        if errors != "":
+        if errors and errors != "":
             print("<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<Errors:\n", errors)
             responseContent += "stderr:\n"+errors+"\n "
         messages.append(userMsg(responseContent))
