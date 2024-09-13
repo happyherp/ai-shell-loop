@@ -2,3 +2,6 @@ openai-env
 openai.key
 __pycache__
 tmp
+# Ignoring .txt files and package-lock.json
+*.txt
+package-lock.json
