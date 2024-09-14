@@ -8,7 +8,6 @@ from pydantic import BaseModel, Field
 
 MODEL = "gpt-4o-2024-08-06"
 
-
 class ResponseContent(BaseModel):
     plan: str = Field(description="Describe how you plan to achieve the goal in plain english")
     directory: str = Field(description="the absolute path in which the command should be executed")
@@ -18,14 +17,13 @@ class ResponseContent(BaseModel):
     If this is True, command should be `None`. This field is not optional. 
     """)
 
-
 class Iteration(BaseModel):
     ai: ResponseContent
     userinput: str
     shellOutput: Optional[str] = None
 
 
-def fromIterations(iterations):
+def summarizeIterations(iterations):
     maxIterationsInHistory = 15
 
     content = ""
@@ -52,7 +50,7 @@ def reduceShelloutput(text):
         return text
 
 
-def loop(mainPrompt: str):
+def loop(mainPrompt: str, userInputSource):
     messages = [systemMsg("You are a helpful assistant."), userMsg(mainPrompt)]
     total_tokens = 0
     iterations = []
@@ -61,7 +59,7 @@ def loop(mainPrompt: str):
         # print("messages: ", fromIterations())
         response = client.chat.completions.create(
             model=MODEL,
-            messages=[systemMsg("You are a helpful assistant."), userMsg(mainPrompt), userMsg(fromIterations(iterations))],
+            messages=[systemMsg("You are a helpful assistant."), userMsg(mainPrompt), userMsg(summarizeIterations(iterations))],
             response_format={"type": "json_object"}
         )
         total_tokens += response.usage.total_tokens
@@ -77,7 +75,7 @@ def loop(mainPrompt: str):
         print(command)
         command = "cd " + obj.directory + " && " + command
         responseContent = None
-        userinput = input("continue?(no, new command)")
+        userinput = userInputSource()
         if userinput == "no": break
         if userinput != "":
             messages.append(userMsg("Your last command was cancelled by the user. He says: " + userinput))
@@ -98,24 +96,28 @@ def loop(mainPrompt: str):
         iterations.append(Iteration(ai=obj, userinput=userinput, shellOutput=responseContent))
     print("Loop finished. ")
 
+def executeGoal(goal:str, userInputSource = lambda: input("continue?(no, new command)")):
+    prompt = """
+    Your goal is:  {goal}. You are connected to a terminal. You 
+    can pass commends to the shell to achieve the goal.
+    You will get both the stdout and stderr streams back as a response. Use this to interact with the shell, to achieve your goal. 
+    Once you see by the response, that you are done, respond with taskCompleted=True to indicate that you are finished. 
+    Do not try to use any interactive editors, like nano.
+    
+    Current Directory: {current_directory}
+    Username: {username}
+    
+    {schema}
+    
+    The content of "command" will be sent to the shell and you will receive the stdout and stderr. 
+    
+    """.format(goal=goal, schema=describe(ResponseContent), current_directory=os.getcwd(),
+               username=getpass.getuser())
 
-goal = sys.argv[1]
+    loop(prompt, userInputSource)
 
-prompt = """
-Your goal is:  {goal}. You are connected to a terminal. You 
-can pass commends to the shell to achieve the goal.
-You will get both the stdout and stderr streams back as a response. Use this to interact with the shell, to achieve your goal. 
-Once you see by the response, that you are done, respond with taskCompleted=True to indicate that you are finished. 
-Do not try to use any interactive editors, like nano.
+if __name__ == "__main__":
+    goal = sys.argv[1]
+    executeGoal(goal)
 
-Current Directory: {current_directory}
-Username: {username}
 
-{schema}
-
-The content of "command" will be sent to the shell and you will receive the stdout and stderr. 
-
-""".format(goal=goal, schema=describe(ResponseContent), current_directory=os.getcwd(),
-           username=getpass.getuser())
-
-loop(prompt)
