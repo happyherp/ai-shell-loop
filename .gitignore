@@ -1,4 +1,5 @@
 openai-env
+venv
 openai.key
 __pycache__
 tmp
