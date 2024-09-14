@@ -7,7 +7,7 @@ def createClient():
     file_path = os.path.join(script_dir,  './openai.key')
 
     with open(file_path, 'r') as file:
-        api_key = file.read()
+        api_key = file.read().strip()
 
     return OpenAI(api_key=api_key)
     

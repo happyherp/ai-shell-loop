@@ -92,9 +92,9 @@ while True:
     #print("Command raw", command)
     messages.append(assistantMsg(response.choices[0].message.content))
     if (obj.taskCompleted): break
-    command = "cd "+obj.directory+ " && " + command
     print("COMMAND>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>> in", obj.directory)
     print(command)
+    command = "cd "+obj.directory+ " && " + command
     responseContent=None
     userinput = input("continue?(no, new command)")
     if userinput == "no": break
