@@ -11,7 +11,7 @@ MODEL = "gpt-4o-2024-08-06"
 class ResponseContent(BaseModel):
     plan:str = Field(description="Describe how you plan to achieve the goal in plain english")
     directory:str = Field(description="the absolute path in which the command should be executed")
-    command:str = Field(description="the shell to be executed to achieve the goal")
+    command:Optional[str] = Field(description="the shell to be executed to achieve the goal")
     taskCompleted:bool = Field(description="""
     Set this to `True`, if you confirmed that you have completed the task and no further actions are necessary.
     If this is true, command should be `None`.
