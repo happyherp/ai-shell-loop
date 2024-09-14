@@ -4,3 +4,4 @@ openai.key
 __pycache__
 tmp
 package-lock.json
+build/
