@@ -53,7 +53,11 @@ class AiShell:
         return content
 
     def build_messages(self):
-        messages = [system_msg("You are a helpful assistant."), user_msg(self.main_prompt)]
+        messages = [
+            system_msg("You are a helpful assistant."),
+            user_msg(self.main_prompt),
+            user_msg(self.get_folder_content())
+        ]
         if len(self.iterations) > 0:
             messages.append(user_msg(self.summarize_iterations()))
             last_iteration = self.iterations[-1]
@@ -88,14 +92,15 @@ class AiShell:
         if ai_response.task_completed: return False
         print("COMMAND>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>> in", ai_response.directory)
         print(command)
-        shell_output = None
         userinput = self.user_input_source()
-        if userinput == "no": return False
+        if userinput == "no":
+            return False
         if userinput != "":
-            pass
+            # do not execute shell command. Userinput will be presented to ai on next run.
+            self.iterations.append(Iteration(ai=ai_response, userinput=userinput, shell_output=None))
         else:
             shell_output = self.execute_shell_command("cd " + ai_response.directory + " && " + command)
-        self.iterations.append(Iteration(ai=ai_response, userinput=userinput, shell_output=shell_output))
+            self.iterations.append(Iteration(ai=ai_response, userinput=userinput, shell_output=shell_output))
         return True
 
     def loop(self):
@@ -127,6 +132,20 @@ class AiShell:
             shell_output += "stderr:\n" + errors + "\n "
         return shell_output
 
+    def get_folder_content(self):
+        """Returns a string listing files and directories with type indicator (file or directory)."""
+        current_directory = os.getcwd()
+        items = os.listdir(current_directory)
+
+        result = "Files in the current directory: \n"
+        for item in items:
+            full_path = os.path.join(current_directory, item)
+            if os.path.isfile(full_path):
+                result += f"{item} [File]\n"
+            elif os.path.isdir(full_path):
+                result += f"{item} [Directory]\n"
+
+        return result
 
 def execute_goal(goal: str, user_input_source=user_input_from_console):
     prompt = """
@@ -135,6 +154,8 @@ def execute_goal(goal: str, user_input_source=user_input_from_console):
     You will get both the stdout and stderr streams back as a response. Use this to interact with the shell, to achieve your goal. 
     Once you have confirmed, that you are done, respond with task_completed=true to indicate that you are finished. 
     Do not try to use any interactive editors, like nano.
+    The value of 'userinput' of previous iterations if to be followed. It takes precedence over the original goal. 
+    If multiple 'userinput' contradict each other, the last one is to be followed. 
     
     Current Directory: {current_directory}
     Username: {username}
