@@ -1,10 +1,11 @@
 #!/usr/bin/env python3
+print("aishell.py is being executed")
 from typing import Optional
 import subprocess, getpass
 import sys, copy
-from describe import describe
-from util import *
 from pydantic import BaseModel, Field
+from ai_shell.describe import describe
+from ai_shell.util import *
 
 MODEL = "gpt-4o-2024-08-06"
 
@@ -170,7 +171,9 @@ def execute_goal(goal: str, user_input_source=user_input_from_console):
     aishell = AiShell(prompt, user_input_source)
     aishell.loop()
 
+def main():
+    goal = sys.argv[1] if len(sys.argv) > 1 else "No goal provided"
+    execute_goal(goal)
 
 if __name__ == "__main__":
-    goal = sys.argv[1]
-    execute_goal(goal)
+    main()

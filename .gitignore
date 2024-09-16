@@ -6,3 +6,5 @@ tmp
 package-lock.json
 build/
 /.idea/
+/dist/
+/ai_do.egg-info/

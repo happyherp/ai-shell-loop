@@ -1,8 +1,6 @@
 from pydantic import BaseModel, Field
 from typing import List
 import json
-import yaml
-
 
 def describe(model):
     schema = model.model_json_schema()

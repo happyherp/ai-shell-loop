@@ -1,6 +1,6 @@
 from unittest import TestCase
-from aishell import execute_goal
-from util import ensure_empty_directory
+from ai_shell.aishell import execute_goal
+from ai_shell.util import ensure_empty_directory
 import os
 
 

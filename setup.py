@@ -9,7 +9,7 @@ setup(
     packages=find_packages(),
     entry_points={
         'console_scripts': [
-            'ai-do=aishell:main',  # Define the CLI command and the entry point
+            'ai-do=ai_shell.aishell:main',  # Define the CLI command and the entry point
         ],
     },
     install_requires=[
