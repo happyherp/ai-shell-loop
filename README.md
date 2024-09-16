@@ -13,7 +13,11 @@ pip install -r build-requirements.txt  # Install dependencies for doing a build.
 ```
 
 ### Open AI Key
-Put your openAI api-key in the file `openai.key` in the project root. 
+
+Set your api key with `export OPENAI_API_KEY='your-api-key'`
+
+See the [official-docs](https://help.openai.com/en/articles/5112595-best-practices-for-api-key-safety)
+for more information.
 
 # Build
 

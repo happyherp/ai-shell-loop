@@ -3,13 +3,7 @@ from openai import OpenAI
 import shutil
 
 def create_client():
-    script_dir = os.path.dirname(os.path.abspath(__file__))
-    file_path = os.path.join(script_dir,  './openai.key')
-
-    with open(file_path, 'r') as file:
-        api_key = file.read().strip()
-
-    return OpenAI(api_key=api_key)
+    return OpenAI()
 
 def system_msg(content): return msg("system", content)
 def user_msg(content): return msg("user", content)
