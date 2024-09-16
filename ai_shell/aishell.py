@@ -1,5 +1,4 @@
 #!/usr/bin/env python3
-print("aishell.py is being executed")
 from typing import Optional
 import subprocess, getpass
 import sys, copy
