@@ -19,6 +19,11 @@ Set your api key with `export OPENAI_API_KEY='your-api-key'`
 See the [official-docs](https://help.openai.com/en/articles/5112595-best-practices-for-api-key-safety)
 for more information.
 
+# Run 
+
+With the virtual python environment activated, inside the project root, run `python -m ai_shell "echo the current time"`
+
+
 # Build
 
 Run `python -m build`
@@ -29,3 +34,4 @@ Run `python -m build`
 pipx install dist/ai_do-0.1.0-py3-none-any.whl
 pipx ensurepath
 ```
+After this, the `ai-do` command should be available anywhere. 
