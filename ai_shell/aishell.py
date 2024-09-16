@@ -31,10 +31,9 @@ class Iteration(BaseModel):
 class AiShell:
     maxIterationsInHistory = 15
 
-    def __init__(self, main_prompt: str, user_input_source=user_input_from_console):
-        self.main_prompt = main_prompt
+    def __init__(self, goal: str, user_input_source=user_input_from_console):
+        self.goal = goal
         self.user_input_source = user_input_source
-        self.total_tokens = 0
         self.total_tokens = 0
         self.iterations = []
         self.client = create_client()
@@ -54,8 +53,8 @@ class AiShell:
 
     def build_messages(self):
         messages = [
-            system_msg("You are a helpful assistant."),
-            user_msg(self.main_prompt),
+            system_msg(self.build_prompt()),
+            user_msg(self.goal),
             user_msg(self.get_folder_content())
         ]
         if len(self.iterations) > 0:
@@ -66,6 +65,28 @@ class AiShell:
                     "Your last command was cancelled by the user with the following message: "
                     + last_iteration.userinput))
         return messages
+
+    def build_prompt(self):
+        return """
+            You are an helpful assistant that achieves goals for the user.  You are connected to a terminal. You 
+            can pass commands to the shell to achieve the goal.
+            You will get both the stdout and stderr streams back as a response. Use this to interact with the shell, to achieve your goal. 
+            Once you have confirmed, that you are done, respond with task_completed=true to indicate that you are finished. 
+            Do not try to use any interactive editors, like nano.
+            The value of 'userinput' of previous iterations is to be followed. It takes precedence over the original goal. 
+            If multiple 'userinput' contradict each other, the last one is to be followed. 
+            
+            Current Directory: {current_directory}
+            Username: {username}
+            
+            Use the following schema for your answers:
+            {schema}
+            
+            The content of "command" will be sent to the shell and you will receive the stdout and stderr. 
+            
+            """.format(schema=describe(ResponseContent), current_directory=os.getcwd(),
+                       username=getpass.getuser())
+
 
     def reduce_shelloutput(self, text):
         if not text: return text
@@ -123,13 +144,15 @@ class AiShell:
         output = result.stdout
         errors = result.stderr
 
-        print("<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<OUTPUT:\n", output)
+        print("<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<OUTPUT:")
+        print(output)
 
         shell_output = "Return Code: " + str(result.returncode)
-        shell_output += "\nstdout:\n" + output + "\n"
+        shell_output += "\nstdout:\n" + codeblock(output)
         if errors and errors != "":
-            print("<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<Errors:\n", errors)
-            shell_output += "stderr:\n" + errors + "\n "
+            print("<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<Errors:")
+            print(errors)
+            shell_output += "stderr:\n" + codeblock(errors)
         return shell_output
 
     def get_folder_content(self):
@@ -148,26 +171,7 @@ class AiShell:
         return result
 
 def execute_goal(goal: str, user_input_source=user_input_from_console):
-    prompt = """
-    Your goal is:  {goal}. You are connected to a terminal. You 
-    can pass commands to the shell to achieve the goal.
-    You will get both the stdout and stderr streams back as a response. Use this to interact with the shell, to achieve your goal. 
-    Once you have confirmed, that you are done, respond with task_completed=true to indicate that you are finished. 
-    Do not try to use any interactive editors, like nano.
-    The value of 'userinput' of previous iterations if to be followed. It takes precedence over the original goal. 
-    If multiple 'userinput' contradict each other, the last one is to be followed. 
-    
-    Current Directory: {current_directory}
-    Username: {username}
-    
-    {schema}
-    
-    The content of "command" will be sent to the shell and you will receive the stdout and stderr. 
-    
-    """.format(goal=goal, schema=describe(ResponseContent), current_directory=os.getcwd(),
-               username=getpass.getuser())
-
-    aishell = AiShell(prompt, user_input_source)
+    aishell = AiShell(goal, user_input_source)
     aishell.loop()
 
 def main():
