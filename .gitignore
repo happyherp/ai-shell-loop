@@ -6,4 +6,4 @@ package-lock.json
 build/
 /.idea/
 /dist/
-/ai_do.egg-info/
+/ai_shell_loop.egg-info/

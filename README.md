@@ -1,7 +1,21 @@
-# ai-shell
+# ai-shell-loop
 Use openAi's gpt to generate and execute bash commands quickly.
 
-## Setup
+## Installation
+
+```bash
+pipx install ai-shell-loop
+```
+
+### Open AI Key
+
+Set your api key with `export OPENAI_API_KEY='your-api-key'`
+
+See the [official-docs](https://help.openai.com/en/articles/5112595-best-practices-for-api-key-safety)
+for more information.
+
+
+## Development Setup
 
 ### Create environment
 ```bash
@@ -12,26 +26,26 @@ pip install -r requirements.txt  # Install dependencies
 pip install -r build-requirements.txt  # Install dependencies for doing a build.
 ```
 
-### Open AI Key
 
-Set your api key with `export OPENAI_API_KEY='your-api-key'`
-
-See the [official-docs](https://help.openai.com/en/articles/5112595-best-practices-for-api-key-safety)
-for more information.
-
-# Run 
+## Run 
 
 With the virtual python environment activated, inside the project root, run `python -m ai_shell "echo the current time"`
 
 
-# Build
+## Build
 
 Run `python -m build`
 
-## Install locally
+### Install locally
 
 ```
-pipx install dist/ai_do-0.1.0-py3-none-any.whl
+pipx install dist/ai_shell_loop-0.1.0-py3-none-any.whl
 pipx ensurepath
 ```
 After this, the `ai-do` command should be available anywhere. 
+
+### Deploy to PyPi
+
+```
+twine upload dist/ai_shell_loop-0.1.0-py3-none-any.whl -u __token__ -p your_pypi_token
+```

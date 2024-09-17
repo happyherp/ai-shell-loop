@@ -1,7 +1,7 @@
 from setuptools import setup, find_packages
 
 setup(
-    name="ai-do",
+    name="ai-shell-loop",
     version="0.1.0",
     description="A command line tool that lets an AI do work for you.",
     long_description=open('README.md').read(),
@@ -9,10 +9,11 @@ setup(
     author="Carlos Freund",
     author_email="carlosfreund@gmail.com",
     license="Apache License 2.0",
+    url="https://github.com/happyherp/ai-shell-loop",
     packages=find_packages(),
     entry_points={
         'console_scripts': [
-            'ai-do=ai_shell.aishell:main',  # Define the CLI command and the entry point
+            'ai-do=ai_shell.aishell:main',
         ],
     },
     install_requires=[
