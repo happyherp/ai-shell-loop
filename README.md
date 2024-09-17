@@ -15,6 +15,18 @@ See the [official-docs](https://help.openai.com/en/articles/5112595-best-practic
 for more information.
 
 
+## Usage
+
+```bash
+ai-do "<plain english explanation of the goal>"
+```
+
+### Example
+
+```bash
+ai-do "create a python program that lists primes below 100"
+```
+
 ## Development Setup
 
 ### Create environment
