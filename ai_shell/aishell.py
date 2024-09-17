@@ -73,6 +73,7 @@ class AiShell:
             You will get both the stdout and stderr streams back as a response. Use this to interact with the shell, to achieve your goal. 
             Once you have confirmed, that you are done, respond with task_completed=true to indicate that you are finished. 
             Do not try to use any interactive editors, like nano.
+            You can use sudo if you need it. 
             The value of 'userinput' of previous iterations is to be followed. It takes precedence over the original goal. 
             If multiple 'userinput' contradict each other, the last one is to be followed. 
             
@@ -139,6 +140,11 @@ class AiShell:
         return ResponseContent.model_validate_json(response.choices[0].message.content)
 
     def execute_shell_command(self, command):
+
+        if "sudo" in command:
+            sudo_password = getpass.getpass("Please enter your sudo password: ")
+            command = command.replace("sudo", f"echo {sudo_password} | sudo -S")
+
         result = subprocess.run(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, shell=True)
 
         output = result.stdout
