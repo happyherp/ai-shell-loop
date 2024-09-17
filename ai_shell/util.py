@@ -34,4 +34,8 @@ def ensure_empty_directory(path):
 
 
 def codeblock(code: str):
-    return "```\n" + code + "\n```\n"
+    code_block_delimiter = "```"
+    while code_block_delimiter in code:
+        # enlarge delimiter if the current one is already in the code.
+        code_block_delimiter += "`"
+    return f"{code_block_delimiter}\n{code}{code_block_delimiter}"
