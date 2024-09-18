@@ -39,3 +39,28 @@ def codeblock(code: str):
         # enlarge delimiter if the current one is already in the code.
         code_block_delimiter += "`"
     return f"{code_block_delimiter}\n{code}{code_block_delimiter}"
+
+def get_folder_content() -> str:
+    """Returns a string listing files and directories with type indicator (file or directory)."""
+    current_directory = os.getcwd()
+    items = os.listdir(current_directory)
+
+    result = f"Files in the current directory({current_directory}): \n"
+    character_limit = 2000
+
+    for item in items:
+        full_path = os.path.join(current_directory, item)
+        if os.path.isfile(full_path):
+            entry = f"{item} [File]\n"
+        elif os.path.isdir(full_path):
+            entry = f"{item} [Directory]\n"
+        else: continue
+
+        # Check if adding this entry would exceed the character limit
+        if len(result) + len(entry) > character_limit:
+            result += "... Extra files skipped.\n"
+            break
+
+        result += entry
+
+    return result

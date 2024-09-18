@@ -15,7 +15,8 @@ def user_input_from_console(): return input("continue?(no, new command)")
 class ResponseContent(BaseModel):
     plan: str = Field(description="Describe how you plan to achieve the goal in plain english")
     directory: str = Field(description="the absolute path in which the command should be executed")
-    command: Optional[str] = Field(description="the shell command to be executed to achieve the goal. Set this to null if you are done.")
+    command: Optional[str] = Field(
+        description="the shell command to be executed to achieve the goal. Set this to null if you are done.")
     task_completed: bool = Field(description="""
     Set this to `true`, if you confirmed that you have completed the task and no further actions are necessary.
     If this is `true`, command should be `null`. This field is not optional. 
@@ -55,7 +56,7 @@ class AiShell:
         messages = [
             system_msg(self.build_prompt()),
             user_msg(self.goal),
-            user_msg(self.get_folder_content())
+            user_msg(get_folder_content())
         ]
         if len(self.iterations) > 0:
             messages.append(user_msg(self.summarize_iterations()))
@@ -161,28 +162,17 @@ class AiShell:
             shell_output += "stderr:\n" + codeblock(errors)
         return shell_output
 
-    def get_folder_content(self):
-        """Returns a string listing files and directories with type indicator (file or directory)."""
-        current_directory = os.getcwd()
-        items = os.listdir(current_directory)
 
-        result = "Files in the current directory: \n"
-        for item in items:
-            full_path = os.path.join(current_directory, item)
-            if os.path.isfile(full_path):
-                result += f"{item} [File]\n"
-            elif os.path.isdir(full_path):
-                result += f"{item} [Directory]\n"
-
-        return result
 
 def execute_goal(goal: str, user_input_source=user_input_from_console):
     aishell = AiShell(goal, user_input_source)
     aishell.loop()
 
+
 def main():
     goal = sys.argv[1] if len(sys.argv) > 1 else "No goal provided"
     execute_goal(goal)
+
 
 if __name__ == "__main__":
     main()
