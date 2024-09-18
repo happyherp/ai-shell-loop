@@ -8,10 +8,9 @@ from typing import Optional, List
 from openai import OpenAI
 from pydantic import BaseModel, Field
 
-from ai_shell.describe import describe
 from ai_shell.util import *
 
-MODEL = "gpt-4-1106-preview"
+MODEL = "gpt-4o-2024-08-06"
 
 
 def user_input_from_console(): return input("continue?(no, new command)")
@@ -24,8 +23,7 @@ class CommandPlan(BaseModel):
     command: str = Field(
         description="the shell command to be executed to achieve the goal. The command should return 0 if it worked.")
     used_commands: List[str] = Field(
-        description="A list of all the different commands, without arguments that must be available for the command to work. ",
-        examples=[["ls", "cat", "grep", "apt-get"], ["ping"]])
+        description='A list of all the different commands, without arguments that must be available for the command to work. Example: ["ls", "cat", "grep", "apt-get"]')
 
 class AiResponse(BaseModel):
 
@@ -102,12 +100,9 @@ class AiShell:
             Current Directory: {current_directory}
             Username: {username}
             
-            Use the following schema for your answers:
-            {schema}
+            The content of "command" will be sent to the shell and you will receive the stdout and stderr and result code. 
             
-            The content of "command" will be sent to the shell and you will receive the stdout and stderr. 
-            
-            """.format(schema=describe(AiResponse), current_directory=os.getcwd(),
+            """.format(current_directory=os.getcwd(),
                        username=getpass.getuser())
 
 
@@ -169,8 +164,17 @@ class AiShell:
         print("Loop finished. ")
 
     def call_ai(self) -> AiResponse:
-        response = self.client.chat.completions.create(
-            model=MODEL, messages=self.build_messages(), response_format={"type": "json_object"}
+        response = self.client.beta.chat.completions.parse(
+            model=MODEL, messages=self.build_messages(),
+            response_format=AiResponse
+            # {
+            #     "type": "json_schema",
+            #     "json_schema": {
+            #         "name":"command_calls",
+            #         "description": "Execute shell commands to achieve the users goal",
+            #         "schema": AiResponse.model_json_schema(),
+            #         "strict": True
+            #     }}
         )
         self.total_tokens += response.usage.total_tokens
         print("Tokens: ", response.usage.total_tokens, "Total: ", self.total_tokens)
