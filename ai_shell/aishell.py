@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-from typing import Optional
+from typing import Optional, List
 import subprocess, getpass
 import sys, copy
 from pydantic import BaseModel, Field
@@ -12,19 +12,28 @@ MODEL = "gpt-4o-2024-08-06"
 def user_input_from_console(): return input("continue?(no, new command)")
 
 
-class ResponseContent(BaseModel):
+
+class CommandPlan(BaseModel):
     plan: str = Field(description="Describe how you plan to achieve the goal in plain english")
     directory: str = Field(description="the absolute path in which the command should be executed")
-    command: Optional[str] = Field(
-        description="the shell command to be executed to achieve the goal. Set this to null if you are done.")
+    command: str = Field(
+        description="the shell command to be executed to achieve the goal. The command should return 0 if it worked.")
+
+class AiResponse(BaseModel):
+
+    command_options: List[CommandPlan] = Field(description="""
+        A list of different approaches to solve the goal. The best ones should come first.
+    """)
+
     task_completed: bool = Field(description="""
     Set this to `true`, if you confirmed that you have completed the task and no further actions are necessary.
-    If this is `true`, command should be `null`. This field is not optional. 
+    If this is `true`, command_options should be empty. This field is not optional. 
     """)
 
 
+
 class Iteration(BaseModel):
-    ai: ResponseContent
+    ai: AiResponse
     userinput: str
     shell_output: Optional[str] = None
 
@@ -86,7 +95,7 @@ class AiShell:
             
             The content of "command" will be sent to the shell and you will receive the stdout and stderr. 
             
-            """.format(schema=describe(ResponseContent), current_directory=os.getcwd(),
+            """.format(schema=describe(AiResponse), current_directory=os.getcwd(),
                        username=getpass.getuser())
 
 
@@ -108,22 +117,25 @@ class AiShell:
             False is returned instead.
         """
         ai_response = self.call_ai()
-        print("PLAN>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>\n")
-        print(ai_response.plan)
-        command = ai_response.command
-        # print("Command raw", command)
         if ai_response.task_completed: return False
-        print("COMMAND>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>> in", ai_response.directory)
-        print(command)
-        userinput = self.user_input_source()
-        if userinput == "no":
-            return False
-        if userinput != "":
-            # do not execute shell command. Userinput will be presented to ai on next run.
-            self.iterations.append(Iteration(ai=ai_response, userinput=userinput, shell_output=None))
-        else:
-            shell_output = self.execute_shell_command("cd " + ai_response.directory + " && " + command)
-            self.iterations.append(Iteration(ai=ai_response, userinput=userinput, shell_output=shell_output))
+        for command_plan in ai_response.command_options:
+            print("PLAN>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>\n")
+            print(command_plan.plan)
+            command = command_plan.command
+            print("COMMAND>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>> in", command_plan.directory)
+            print(command)
+            userinput = self.user_input_source()
+            if userinput == "no":
+                return False
+            if userinput != "":
+                # do not execute shell command. Userinput will be presented to ai on next run.
+                self.iterations.append(Iteration(ai=ai_response, userinput=userinput, shell_output=None))
+            else:
+                completed_process = self.execute_shell_command("cd " + command_plan.directory + " && " + command)
+                self.print_shell_output(completed_process)
+                output_as_string = self.shell_output_to_string(completed_process)
+                self.iterations.append(Iteration(ai=ai_response, userinput=userinput, shell_output=output_as_string))
+                if completed_process.returncode == 0: break
         return True
 
     def loop(self):
@@ -132,37 +144,39 @@ class AiShell:
             pass
         print("Loop finished. ")
 
-    def call_ai(self):
+    def call_ai(self) -> AiResponse:
         response = self.client.chat.completions.create(
             model=MODEL, messages=self.build_messages(), response_format={"type": "json_object"}
         )
         self.total_tokens += response.usage.total_tokens
         print("Tokens: ", response.usage.total_tokens, "Total: ", self.total_tokens)
-        return ResponseContent.model_validate_json(response.choices[0].message.content)
+        return AiResponse.model_validate_json(response.choices[0].message.content)
 
-    def execute_shell_command(self, command):
+    def execute_shell_command(self, command) ->  subprocess.CompletedProcess[str]:
 
         if "sudo" in command:
             sudo_password = getpass.getpass("Please enter your sudo password: ")
             command = command.replace("sudo", f"echo {sudo_password} | sudo -S")
 
-        result = subprocess.run(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, shell=True)
+        return subprocess.run(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, shell=True)
 
-        output = result.stdout
-        errors = result.stderr
 
-        print("<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<OUTPUT:")
-        print(output)
+    def print_shell_output(self, completed_process : subprocess.CompletedProcess[str]):
+        print("<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<stdout:")
+        print(completed_process.stdout)
+        if completed_process.stderr and completed_process.stderr  != "":
+            print("<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<Errors:")
+            print(completed_process.stderr)
 
-        shell_output = "Return Code: " + str(result.returncode)
+    def shell_output_to_string(self, completed_process : subprocess.CompletedProcess[str]):
+
+        output = completed_process.stdout
+        errors = completed_process.stderr
+        shell_output = "Return Code: " + str(completed_process.returncode)
         shell_output += "\nstdout:\n" + codeblock(output)
         if errors and errors != "":
-            print("<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<Errors:")
-            print(errors)
             shell_output += "stderr:\n" + codeblock(errors)
         return shell_output
-
-
 
 def execute_goal(goal: str, user_input_source=user_input_from_console):
     aishell = AiShell(goal, user_input_source)
