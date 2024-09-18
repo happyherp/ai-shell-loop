@@ -1,5 +1,5 @@
 from unittest import TestCase
-from ai_shell.aishell import execute_goal, AiShell
+from ai_shell.aishell import AiShell
 from ai_shell.util import ensure_empty_directory
 import os
 
@@ -39,3 +39,10 @@ class Test(TestCase):
         self.assertTrue(os.path.isfile(filename))
         with open(filename, "r") as file:
             self.assertEqual('Hello World', file.read().strip())
+
+    def test_check_commands_availability(self):
+        aishell = AiShell("")
+        aishell.check_commands_availability({"ls", "cat", "this-command-does-not-exist"})
+
+        self.assertEqual({"ls", "cat"}, aishell.available_commands)
+        self.assertEqual({"this-command-does-not-exist"}, aishell.unavailable_commands)

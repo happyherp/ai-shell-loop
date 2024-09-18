@@ -18,6 +18,9 @@ class CommandPlan(BaseModel):
     directory: str = Field(description="the absolute path in which the command should be executed")
     command: str = Field(
         description="the shell command to be executed to achieve the goal. The command should return 0 if it worked.")
+    used_commands: List[str] = Field(
+        description="A list of all the different commands, without arguments that must be available for the command to work. ",
+        examples=[["ls", "cat", "grep", "apt-get"], ["ping"]])
 
 class AiResponse(BaseModel):
 
@@ -34,7 +37,8 @@ class AiResponse(BaseModel):
 
 class Iteration(BaseModel):
     ai: AiResponse
-    userinput: str
+    userinput: Optional[str] = None
+    missing_commands: Optional[List[str]] = None
     shell_output: Optional[str] = None
 
 
@@ -47,6 +51,8 @@ class AiShell:
         self.total_tokens = 0
         self.iterations = []
         self.client = create_client()
+        self.available_commands = set()
+        self.unavailable_commands = set()
 
     def summarize_iterations(self):
         content = ""
@@ -65,12 +71,13 @@ class AiShell:
         messages = [
             system_msg(self.build_prompt()),
             user_msg(self.goal),
-            user_msg(get_folder_content())
+            user_msg(get_folder_content()),
+            user_msg(self.get_command_availability())
         ]
         if len(self.iterations) > 0:
             messages.append(user_msg(self.summarize_iterations()))
             last_iteration = self.iterations[-1]
-            if last_iteration.userinput != "":
+            if last_iteration.userinput and last_iteration.userinput != "":
                 messages.append(user_msg(
                     "Your last command was cancelled by the user with the following message: "
                     + last_iteration.userinput))
@@ -117,6 +124,11 @@ class AiShell:
             False is returned instead.
         """
         ai_response = self.call_ai()
+        if not ai_response.command_options:
+            print("Ai did not provide a single command. ")
+            return False
+        all_used_commands = {cmd for plan in ai_response.command_options for cmd in plan.used_commands}
+        self.check_commands_availability(all_used_commands)
         if ai_response.task_completed: return False
         for command_plan in ai_response.command_options:
             print("PLAN>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>\n")
@@ -124,12 +136,19 @@ class AiShell:
             command = command_plan.command
             print("COMMAND>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>> in", command_plan.directory)
             print(command)
+
+            missing_commands = self.unavailable_commands & set(command_plan.used_commands)
+            if missing_commands:
+                print("Missing commands:", missing_commands)
+                self.iterations.append(Iteration(ai=ai_response, missing_commands = missing_commands))
+                continue
+
             userinput = self.user_input_source()
             if userinput == "no":
                 return False
             if userinput != "":
                 # do not execute shell command. Userinput will be presented to ai on next run.
-                self.iterations.append(Iteration(ai=ai_response, userinput=userinput, shell_output=None))
+                self.iterations.append(Iteration(ai=ai_response, userinput=userinput))
             else:
                 completed_process = self.execute_shell_command("cd " + command_plan.directory + " && " + command)
                 self.print_shell_output(completed_process)
@@ -177,6 +196,27 @@ class AiShell:
         if errors and errors != "":
             shell_output += "stderr:\n" + codeblock(errors)
         return shell_output
+
+    def check_commands_availability(self, commands):
+        """
+        Given a list of shell commands (without arguments), this function checks if they are available on the current machine.
+        It will update self.available_commands and self.unavailable_commands accordingly.
+
+        Args:
+            commands (set): Set of shell commands (e.g., ["cat", "bat", "apt-get"]).
+        """
+        for command in commands:
+            # Check if the command is available using shutil.which()
+            if shutil.which(command) is not None:
+                self.available_commands.add(command)
+                self.unavailable_commands.discard(command)
+            else:
+                self.available_commands.discard(command)
+                self.unavailable_commands.add(command)
+
+    def get_command_availability(self):
+        return "confirmed available commands: {}\n unavailable commands: {}".format(self.available_commands, self.unavailable_commands)
+
 
 def execute_goal(goal: str, user_input_source=user_input_from_console):
     aishell = AiShell(goal, user_input_source)
