@@ -58,6 +58,7 @@ class AiShell:
         self.client = OpenAI()
         self.available_commands = set()
         self.unavailable_commands = set()
+        self.sudo_password = None
 
     def summarize_iterations(self):
         content = ""
@@ -179,8 +180,9 @@ class AiShell:
     def execute_shell_command(self, command) ->  subprocess.CompletedProcess[str]:
 
         if "sudo" in command:
-            sudo_password = getpass.getpass("Please enter your sudo password: ")
-            command = command.replace("sudo", f"echo {sudo_password} | sudo -S")
+            if not self.sudo_password:
+                self.sudo_password = getpass.getpass("Please enter your sudo password: ")
+            command = command.replace("sudo", f"echo {self.sudo_password} | sudo -S")
 
         return subprocess.run(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, shell=True)
 
