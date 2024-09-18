@@ -1,5 +1,5 @@
 from unittest import TestCase
-from ai_shell.aishell import AiShell
+from ai_shell.aishell import AiShell, CommandPlan
 from ai_shell.util import ensure_empty_directory
 import os
 
@@ -42,7 +42,10 @@ class Test(TestCase):
 
     def test_check_commands_availability(self):
         aishell = AiShell("")
-        aishell.check_commands_availability({"ls", "cat", "this-command-does-not-exist"})
+        aishell.check_commands_availability([CommandPlan(
+            used_commands = ["ls", "cat", "this-command-does-not-exist"],
+            command="irrelevant", directory=".", plan="anyplan"
+        )])
 
         self.assertEqual({"ls", "cat"}, aishell.available_commands)
         self.assertEqual({"this-command-does-not-exist"}, aishell.unavailable_commands)

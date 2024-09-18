@@ -130,18 +130,15 @@ class AiShell:
             False is returned instead.
         """
         ai_response = self.call_ai()
-        if not ai_response.command_options:
-            print("Ai did not provide a single command. ")
+        if ai_response.task_completed:
+            print("AI completed its task.")
             return False
-        all_used_commands = {cmd for plan in ai_response.command_options for cmd in plan.used_commands}
-        self.check_commands_availability(all_used_commands)
-        if ai_response.task_completed: return False
+        if not ai_response.command_options:
+            print("Ai did not provide a single command.")
+            return False
+        self.check_commands_availability(ai_response.command_options)
         for command_plan in ai_response.command_options:
-            print("PLAN>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>\n")
-            print(command_plan.plan)
-            command = command_plan.command
-            print("COMMAND>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>> in", command_plan.directory)
-            print(command)
+            self.printCommand(command_plan)
 
             missing_commands = self.unavailable_commands & set(command_plan.used_commands)
             if missing_commands:
@@ -156,15 +153,20 @@ class AiShell:
                 # do not execute shell command. Userinput will be presented to ai on next run.
                 self.iterations.append(Iteration(ai=ai_response, userinput=userinput))
             else:
-                completed_process = self.execute_shell_command("cd " + command_plan.directory + " && " + command)
+                completed_process = self.execute_shell_command("cd " + command_plan.directory + " && " + command_plan.command)
                 self.print_shell_output(completed_process)
                 output_as_string = self.shell_output_to_string(completed_process)
                 self.iterations.append(Iteration(ai=ai_response, userinput=userinput, shell_output=output_as_string))
                 if completed_process.returncode == 0: break
         return True
 
-    def loop(self):
+    def printCommand(self, command_plan):
+        print("PLAN>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>")
+        print(command_plan.plan)
+        print("COMMAND>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>> in", command_plan.directory)
+        print(command_plan.command)
 
+    def loop(self):
         while self.run_once():
             pass
         print("Loop finished. ")
@@ -204,16 +206,13 @@ class AiShell:
             shell_output += "stderr:\n" + codeblock(errors)
         return shell_output
 
-    def check_commands_availability(self, commands):
+    def check_commands_availability(self, command_options:List[CommandPlan]):
         """
-        Given a list of shell commands (without arguments), this function checks if they are available on the current machine.
+        Checks if the commands used in the command-options are available on the current machine.
         It will update self.available_commands and self.unavailable_commands accordingly.
-
-        Args:
-            commands (set): Set of shell commands (e.g., ["cat", "bat", "apt-get"]).
         """
-        for command in commands:
-            # Check if the command is available using shutil.which()
+        all_used_commands = {cmd for plan in command_options for cmd in plan.used_commands}
+        for command in all_used_commands:
             if shutil.which(command) is not None:
                 self.available_commands.add(command)
                 self.unavailable_commands.discard(command)
