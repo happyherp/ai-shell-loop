@@ -1,11 +1,5 @@
 import os
-from openai import OpenAI
 import shutil
-
-
-def create_client():
-    return OpenAI()
-
 
 def system_msg(content):
     return msg("system", content)

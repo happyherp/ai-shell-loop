@@ -1,8 +1,13 @@
 #!/usr/bin/env python3
+import copy
+import getpass
+import subprocess
+import sys
 from typing import Optional, List
-import subprocess, getpass
-import sys, copy
+
+from openai import OpenAI
 from pydantic import BaseModel, Field
+
 from ai_shell.describe import describe
 from ai_shell.util import *
 
@@ -50,7 +55,7 @@ class AiShell:
         self.user_input_source = user_input_source
         self.total_tokens = 0
         self.iterations = []
-        self.client = create_client()
+        self.client = OpenAI()
         self.available_commands = set()
         self.unavailable_commands = set()
 
