@@ -11,7 +11,7 @@ from pydantic import BaseModel, Field
 from ai_shell.describe import describe
 from ai_shell.util import *
 
-MODEL = "gpt-4o-2024-08-06"
+MODEL = "gpt-4-1106-preview"
 
 
 def user_input_from_console(): return input("continue?(no, new command)")
