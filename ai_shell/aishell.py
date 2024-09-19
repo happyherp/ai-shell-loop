@@ -17,18 +17,20 @@ MODEL = "gpt-4-1106-preview"
 def user_input_from_console(): return input("continue?(no, new command)")
 
 
-
 class CommandPlan(BaseModel):
     plan: str = Field(description="Describe how you plan to achieve the goal in plain english")
     directory: str = Field(description="the absolute path in which the command should be executed")
     command: str = Field(
         description="the shell command to be executed to achieve the goal. The command should return 0 if it worked.")
+    check_command: str = Field(description="Another shell command. It will be executed after 'command' "
+                                           + "has been successfully executed. This command must be used to check if "
+                                           + "'command' has actually achieved its goal.")
     used_commands: List[str] = Field(
         description="A list of all the different commands, without arguments that must be available for the command to work. ",
         examples=[["ls", "cat", "grep", "apt-get"], ["ping"]])
 
-class AiResponse(BaseModel):
 
+class AiResponse(BaseModel):
     command_options: List[CommandPlan] = Field(description="""
         A list of different approaches to solve the goal. The best ones should come first.
     """)
@@ -39,15 +41,16 @@ class AiResponse(BaseModel):
     """)
 
 
-
 class Iteration(BaseModel):
-    ai: AiResponse
+    command_plan: CommandPlan
     userinput: Optional[str] = None
     missing_commands: Optional[List[str]] = None
     shell_output: Optional[str] = None
+    check_shell_output: Optional[str] = None
 
 
 class AiShell:
+    iterations: list[Iteration]
     maxIterationsInHistory = 15
 
     def __init__(self, goal: str, user_input_source=user_input_from_console):
@@ -95,6 +98,9 @@ class AiShell:
             can pass commands to the shell to achieve the goal.
             You will get both the stdout and stderr streams back as a response. Use this to interact with the shell, to achieve your goal. 
             Once you have confirmed, that you are done, respond with task_completed=true to indicate that you are finished. 
+            In order to confirm that you have to achieved your goal, you must execute an additional command in 'check_command' to check if 
+            whatever the goal is, was actually done. This will often require using cat, which, and similar commands. 
+            Do not assume that you are done, just because the command finished without errors.
             Do not try to use any interactive editors, like nano.
             You can use sudo if you need it. 
             The value of 'userinput' of previous iterations is to be followed. It takes precedence over the original goal. 
@@ -110,7 +116,6 @@ class AiShell:
             
             """.format(schema=describe(AiResponse), current_directory=os.getcwd(),
                        username=getpass.getuser())
-
 
     def reduce_shelloutput(self, text):
         if not text: return text
@@ -139,25 +144,34 @@ class AiShell:
         self.check_commands_availability(ai_response.command_options)
         for command_plan in ai_response.command_options:
             self.printCommand(command_plan)
-
             missing_commands = self.unavailable_commands & set(command_plan.used_commands)
             if missing_commands:
                 print("Missing commands:", missing_commands)
-                self.iterations.append(Iteration(ai=ai_response, missing_commands = missing_commands))
+                self.iterations.append(Iteration(command_plan=command_plan, missing_commands=missing_commands))
                 continue
-
             userinput = self.user_input_source()
             if userinput == "no":
                 return False
             if userinput != "":
                 # do not execute shell command. Userinput will be presented to ai on next run.
-                self.iterations.append(Iteration(ai=ai_response, userinput=userinput))
+                self.iterations.append(Iteration(command_plan=command_plan, userinput=userinput))
             else:
-                completed_process = self.execute_shell_command("cd " + command_plan.directory + " && " + command_plan.command)
-                self.print_shell_output(completed_process)
-                output_as_string = self.shell_output_to_string(completed_process)
-                self.iterations.append(Iteration(ai=ai_response, userinput=userinput, shell_output=output_as_string))
-                if completed_process.returncode == 0: break
+                command_process = self.execute_shell_command(
+                    "cd " + command_plan.directory + " && " + command_plan.command)
+                self.print_shell_output(command_process)
+                output_as_string = self.shell_output_to_string(command_process)
+                if command_process.returncode == 0:
+                    print("Checking if command was successful: ", command_plan.check_command)
+                    check_process = self.execute_shell_command(
+                        "cd " + command_plan.directory + " && " + command_plan.check_command)
+                    self.print_shell_output(check_process)
+                    check_output_as_string = self.shell_output_to_string(check_process)
+                    self.iterations.append(
+                        Iteration(command_plan=command_plan, userinput=userinput, shell_output=output_as_string,
+                                  check_shell_output=check_output_as_string))
+                else:
+                    self.iterations.append(
+                        Iteration(command_plan=command_plan, userinput=userinput, shell_output=output_as_string))
         return True
 
     def printCommand(self, command_plan):
@@ -179,7 +193,7 @@ class AiShell:
         print("Tokens: ", response.usage.total_tokens, "Total: ", self.total_tokens)
         return AiResponse.model_validate_json(response.choices[0].message.content)
 
-    def execute_shell_command(self, command) ->  subprocess.CompletedProcess[str]:
+    def execute_shell_command(self, command) -> subprocess.CompletedProcess[str]:
 
         if "sudo" in command:
             if not self.sudo_password:
@@ -188,15 +202,14 @@ class AiShell:
 
         return subprocess.run(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, shell=True)
 
-
-    def print_shell_output(self, completed_process : subprocess.CompletedProcess[str]):
+    def print_shell_output(self, completed_process: subprocess.CompletedProcess[str]):
         print("<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<stdout:")
         print(completed_process.stdout)
-        if completed_process.stderr and completed_process.stderr  != "":
+        if completed_process.stderr and completed_process.stderr != "":
             print("<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<Errors:")
             print(completed_process.stderr)
 
-    def shell_output_to_string(self, completed_process : subprocess.CompletedProcess[str]):
+    def shell_output_to_string(self, completed_process: subprocess.CompletedProcess[str]):
 
         output = completed_process.stdout
         errors = completed_process.stderr
@@ -206,7 +219,7 @@ class AiShell:
             shell_output += "stderr:\n" + codeblock(errors)
         return shell_output
 
-    def check_commands_availability(self, command_options:List[CommandPlan]):
+    def check_commands_availability(self, command_options: List[CommandPlan]):
         """
         Checks if the commands used in the command-options are available on the current machine.
         It will update self.available_commands and self.unavailable_commands accordingly.
@@ -221,7 +234,8 @@ class AiShell:
                 self.unavailable_commands.add(command)
 
     def get_command_availability(self):
-        return "confirmed available commands: {}\n unavailable commands: {}".format(self.available_commands, self.unavailable_commands)
+        return "confirmed available commands: {}\n unavailable commands: {}".format(self.available_commands,
+                                                                                    self.unavailable_commands)
 
 
 def execute_goal(goal: str, user_input_source=user_input_from_console):
