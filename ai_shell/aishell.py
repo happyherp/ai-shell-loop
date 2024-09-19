@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 import copy
 import getpass
+import json
 import subprocess
 import sys
 from typing import Optional, List
@@ -31,9 +32,8 @@ class CommandPlan(BaseModel):
 
 
 class AiResponse(BaseModel):
-    command_options: List[CommandPlan] = Field(description="""
-        A list of different approaches to solve the goal. The best ones should come first.
-    """)
+    command_options: List[CommandPlan] = Field(description=
+                                               "A list of different approaches to solve the goal. The best ones should come first.")
 
     task_completed: bool = Field(description="""
     Set this to `true`, if you confirmed that you have completed the task and no further actions are necessary.
@@ -42,11 +42,16 @@ class AiResponse(BaseModel):
 
 
 class Iteration(BaseModel):
-    command_plan: CommandPlan
-    userinput: Optional[str] = None
-    missing_commands: Optional[List[str]] = None
-    shell_output: Optional[str] = None
-    check_shell_output: Optional[str] = None
+    command_plan: CommandPlan = Field(description="The CommandPlan that was executed.")
+    userinput: Optional[str] = Field(default = None, description=
+                                     "The input the user gave after seeing the command and plan. "
+                                     + "Empty string means the user was ok with the command. null means no user input was given. "
+                                     + "Another string means the user did not want to execute the command. "
+                                     + "The string is the reason why. It is to be considered as an amendment or extension of the original goal.")
+    missing_commands: Optional[List[str]] = Field(default = None, description=
+                                                  "Commands that where not available and the shell. For that reason, the command was not executed.")
+    shell_output: Optional[str] = Field(default= None, description="If the command of the CommandPlan was executed, this contains the stdout, stderr and result code.")
+    check_shell_output: Optional[str] = Field(default= None, description="If the check_command of the CommandPlan was executed, this contains the stdout, stderr and result code.")
 
 
 class AiShell:
@@ -64,16 +69,23 @@ class AiShell:
         self.sudo_password = None
 
     def summarize_iterations(self):
-        content = ""
+        content = "These are the commands that have previously been executed as json. \n"
+        content += "They have the following schema: \n"
+        iteration_schema = Iteration.model_json_schema()
+        # Modify Iteration schema to reference CommandPlan via $ref
+        # The schema of CommandPlan is already part of the system prompt.
+        iteration_schema['properties']['command_plan'] = {"$ref": "#/definitions/CommandPlan"}
+        del iteration_schema["$defs"]["CommandPlan"]
+        content += codeblock(json.dumps(iteration_schema, indent=0)) + "\n"
         if len(self.iterations) > AiShell.maxIterationsInHistory:
             content += str(len(self.iterations) - AiShell.maxIterationsInHistory) + " iterations skipped.\n "
 
-        content += "Previous iterations:[\n"
+        content += "Previous iterations:\n'''json\n[\n"
         for i in self.iterations[-AiShell.maxIterationsInHistory:]:
             small = copy.deepcopy(i)
             small.shell_output = self.reduce_shelloutput(small.shell_output)
-            content += small.model_dump_json() + "\n"
-        content += "]"
+            content += small.model_dump_json(indent=0) + ",\n"
+        content += "]\n'''\n"
         return content
 
     def build_messages(self):
@@ -94,27 +106,29 @@ class AiShell:
 
     def build_prompt(self):
         return """
-            You are an helpful assistant that achieves goals for the user.  You are connected to a terminal. You 
-            can pass commands to the shell to achieve the goal.
-            You will get both the stdout and stderr streams back as a response. Use this to interact with the shell, to achieve your goal. 
-            Once you have confirmed, that you are done, respond with task_completed=true to indicate that you are finished. 
-            In order to confirm that you have to achieved your goal, you must execute an additional command in 'check_command' to check if 
-            whatever the goal is, was actually done. This will often require using cat, which, and similar commands. 
-            Do not assume that you are done, just because the command finished without errors.
-            Do not try to use any interactive editors, like nano.
-            You can use sudo if you need it. 
-            The value of 'userinput' of previous iterations is to be followed. It takes precedence over the original goal. 
-            If multiple 'userinput' contradict each other, the last one is to be followed. 
-            
-            Current Directory: {current_directory}
-            Username: {username}
-            
-            Use the following schema for your answers:
-            {schema}
-            
-            The content of "command" will be sent to the shell and you will receive the stdout and stderr. 
-            
-            """.format(schema=describe(AiResponse), current_directory=os.getcwd(),
+You are an helpful assistant that achieves goals for the user.  You are connected to a terminal. You 
+can pass commands to the shell to achieve the goal.
+You will get both the stdout and stderr streams back as a response. Use this to interact with the shell, to achieve your goal. 
+Once you have confirmed, that you are done, respond with task_completed=true to indicate that you are finished. 
+In order to confirm that you have to achieved your goal, you must execute an additional command in 'check_command' to check if 
+whatever the goal is, was actually done. This will often require using cat, which, and similar commands. 
+Do not assume that you are done, just because the command finished without errors.
+Do not try to use any interactive editors, like nano.
+You can use sudo if you need it. 
+The value of 'userinput' of previous iterations is to be followed. It takes precedence over the original goal. 
+If multiple 'userinput' contradict each other, the last one is to be followed. 
+
+Current Directory: {current_directory}
+Username: {username}
+
+Use the following json-schema for your answers:
+
+{schema}
+
+The content of "command" will be sent to the shell and you will receive the stdout and stderr. 
+If the return code of the command is 0, the content of "check_command" will also be executed and you will receive the stdout and stderr. 
+
+""".format(schema=describe(AiResponse), current_directory=os.getcwd(),
                        username=getpass.getuser())
 
     def reduce_shelloutput(self, text):

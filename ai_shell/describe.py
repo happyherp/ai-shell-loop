@@ -1,12 +1,12 @@
 from pydantic import BaseModel, Field
 from typing import List
 import json
+from .util import codeblock
 
 def describe(model):
     schema = model.model_json_schema()
-    asJson = json.dumps(schema, indent=2)
-    return ("Respond with JSON that adheres to the following JSON Schema:\n" 
-    +"```json\n"+ asJson + "\n```")
+    as_json = json.dumps(schema, indent=0)
+    return codeblock(as_json)
 
 
 if __name__ == "__main__":
