@@ -19,17 +19,11 @@ from .logger import setup_logging
 log_file = setup_logging()
 print(f"Logging initialized. Log file: {log_file}")
 
-MODEL = "gpt-4-1106-preview"
-
-
-def user_input_from_console(): return input("continue?(no, new command)")
-
-
 class AiShell:
     iterations: list[Iteration]
     maxIterationsInHistory = 15
 
-    def __init__(self, goal: str, user_input_source=user_input_from_console):
+    def __init__(self, goal: str, user_input_source=lambda:input("continue?(no, new command)")):
         logging.info(f"Initializing AiShell with goal: {goal}")
         self.goal = goal
         self.user_input_source = user_input_source
@@ -95,7 +89,7 @@ class AiShell:
 
     def call_ai(self) -> AiResponse:
         response = self.client.chat.completions.create(
-            model=MODEL, messages=self.build_messages(), response_format={"type": "json_object"}
+            model="gpt-4-1106-preview", messages=self.build_messages(), response_format={"type": "json_object"}
         )
         self.total_tokens += response.usage.total_tokens
         print("Tokens: ", response.usage.total_tokens, "Total: ", self.total_tokens)
