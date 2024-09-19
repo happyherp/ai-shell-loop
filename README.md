@@ -92,6 +92,12 @@ After this, the `ai-do` command should be available anywhere.
 twine upload dist/ai_shell_loop-0.1.0-py3-none-any.whl -u __token__ -p your_pypi_token
 ```
 
+##### Check that commit is tagged
+The package can only be deployed, if there are no pending changes in git and the exact commit you are on is tagged.
+`git status` should show nothing.  
+
+`git describe --tags` should return something like `v0.1.0`.
+
 ### Versioning
 
 Versioning is doing through git-tags.
