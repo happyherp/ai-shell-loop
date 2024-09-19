@@ -1,1 +1,2 @@
 build==1.2.2
+setuptools_scm==8.1.0
