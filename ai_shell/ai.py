@@ -13,12 +13,13 @@ from .describe import describe
 if TYPE_CHECKING:
     from .aishell import AiShell
 
+
 class Ai:
     """Communicates with the AI"""
 
     maxIterationsInHistory = 15
 
-    def __init__(self, ai_shell:'AiShell'):
+    def __init__(self, ai_shell: 'AiShell'):
         self.ai_shell = ai_shell
         self.total_tokens = 0
         self.client = OpenAI()
@@ -30,7 +31,7 @@ class Ai:
         self.total_tokens += response.usage.total_tokens
         logging.info(f"Tokens: {response.usage.total_tokens}, Total: {self.total_tokens}")
         content = response.choices[0].message.content
-        logging.debug("Response content: "+content)
+        logging.debug("Response content: " + content)
         return AiResponse.model_validate_json(content)
 
     def build_messages(self):
@@ -38,7 +39,7 @@ class Ai:
             system_msg(self.build_prompt()),
             user_msg(self.ai_shell.goal),
             user_msg(get_folder_content()),
-            user_msg(self.ai_shell.get_command_availability())
+            user_msg(self.ai_shell.shell.get_command_availability())
         ]
         if len(self.ai_shell.iterations) > 0:
             messages.append(user_msg(self.summarize_iterations()))

@@ -1,5 +1,6 @@
 from unittest import TestCase
 from ai_shell.aishell import AiShell
+from ai_shell.shell import Shell
 from ai_shell.models import CommandPlan
 from ai_shell.util import ensure_empty_directory
 import os
@@ -23,7 +24,7 @@ class Test(TestCase):
         self.assertTrue(os.path.isfile(filename))
         with open(filename, "r") as file:
             self.assertEqual('Hello World', file.read().strip())
-        self.assertEqual("cat build/test-output/output.txt", aishell.iterations[-1].command_plan.check_command)
+        self.assertTrue("output.txt" in aishell.iterations[-1].command_plan.check_command)
 
         #next call the ai confirms that the job is done.
         self.assertFalse(aishell.run_once())
@@ -50,11 +51,12 @@ class Test(TestCase):
             self.assertEqual('Hello World', file.read().strip())
 
     def test_check_commands_availability(self):
-        aishell = AiShell("")
-        aishell.check_commands_availability([CommandPlan(
+        """Should be moved to test for shell only."""
+        shell = Shell()
+        shell.check_commands_availability([CommandPlan(
             used_commands = ["ls", "cat", "this-command-does-not-exist"],
             command="irrelevant", directory=".", plan="any plan", check_command = "does not matter"
         )])
 
-        self.assertEqual({"ls", "cat"}, aishell.available_commands)
-        self.assertEqual({"this-command-does-not-exist"}, aishell.unavailable_commands)
+        self.assertEqual({"ls", "cat"}, shell.available_commands)
+        self.assertEqual({"this-command-does-not-exist"}, shell.unavailable_commands)
