@@ -1,5 +1,6 @@
 from unittest import TestCase
-from ai_shell.aishell import AiShell, CommandPlan
+from ai_shell.aishell import AiShell
+from ai_shell.models import CommandPlan
 from ai_shell.util import ensure_empty_directory
 import os
 
