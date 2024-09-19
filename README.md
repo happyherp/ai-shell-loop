@@ -73,7 +73,10 @@ With the virtual python environment activated, inside the project root, run `pyt
 
 ## Build
 
-Run `python -m build`
+Run 
+```
+python -m build
+```
 
 ### Install locally
 
@@ -88,3 +91,14 @@ After this, the `ai-do` command should be available anywhere.
 ```
 twine upload dist/ai_shell_loop-0.1.0-py3-none-any.whl -u __token__ -p your_pypi_token
 ```
+
+### Versioning
+
+Versioning is doing through git-tags.
+
+```
+git tag -a v0.1.0 -m "Version 0.1.0"
+git push origin v0.1.0
+```
+
+The latest tag will automatically be used by git in setup.py
