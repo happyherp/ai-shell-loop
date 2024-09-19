@@ -53,7 +53,7 @@ class Test(TestCase):
         aishell = AiShell("")
         aishell.check_commands_availability([CommandPlan(
             used_commands = ["ls", "cat", "this-command-does-not-exist"],
-            command="irrelevant", directory=".", plan="anyplan", check_command = "does not matter"
+            command="irrelevant", directory=".", plan="any plan", check_command = "does not matter"
         )])
 
         self.assertEqual({"ls", "cat"}, aishell.available_commands)
