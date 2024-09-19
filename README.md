@@ -26,7 +26,34 @@ ai-do "<plain english explanation of the goal>"
 ```bash
 ai-do "create a python program that lists primes below 100"
 ```
+## Logging
+Each execution of ai-shell-loop generates a log file containing detailed information about the execution process.
 
+### Log File Location
+* Default Locations:
+* * Linux: `~/.local/share/ai-shell-loop/logs/`
+* * macOS: `~/Library/Application Support/ai-shell-loop/logs/`
+
+### Custom Log Directory:
+
+Set the environment variable `AI_SHELL_LOOP_LOG_DIR` to specify a custom directory for log files.
+### Log File Naming
+Log files are named with the current date and time, e.g., `ai-shell-loop_2024-04-27_15-30-00.log`.
+
+### Logging Levels
+By default, the logging level is set to INFO. To change the logging level, set the environment variable AI_SHELL_LOOP_LOG_LEVEL to one of the following:
+
+* `DEBUG`
+* `INFO`
+* `WARNING`
+* `ERROR`
+* `CRITICAL`
+
+#### Example:
+
+```bash
+export AI_SHELL_LOOP_LOG_LEVEL=DEBUG
+```
 ## Development Setup
 
 ### Create environment
@@ -39,7 +66,7 @@ pip install -r build-requirements.txt  # Install dependencies for doing a build.
 ```
 
 
-## Run 
+### Run 
 
 With the virtual python environment activated, inside the project root, run `python -m ai_shell "echo the current time"`
 

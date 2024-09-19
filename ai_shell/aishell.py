@@ -1,4 +1,13 @@
 #!/usr/bin/env python3
+
+import logging
+from .logger import setup_logging
+
+# Initialize logging
+log_file = setup_logging()
+print(f"Logging initialized. Log file: {log_file}")
+
+
 import copy
 import getpass
 import json
@@ -9,8 +18,8 @@ from typing import Optional, List
 from openai import OpenAI
 from pydantic import BaseModel, Field
 
-from ai_shell.describe import describe
-from ai_shell.util import *
+from .describe import describe
+from .util import *
 
 MODEL = "gpt-4-1106-preview"
 
@@ -59,6 +68,7 @@ class AiShell:
     maxIterationsInHistory = 15
 
     def __init__(self, goal: str, user_input_source=user_input_from_console):
+        logging.info(f"Initializing AiShell with goal: {goal}")
         self.goal = goal
         self.user_input_source = user_input_source
         self.total_tokens = 0
@@ -67,6 +77,7 @@ class AiShell:
         self.available_commands = set()
         self.unavailable_commands = set()
         self.sudo_password = None
+
 
     def summarize_iterations(self):
         content = "These are the commands that have previously been executed as json. \n"
@@ -102,6 +113,7 @@ class AiShell:
                 messages.append(user_msg(
                     "Your last command was cancelled by the user with the following message: "
                     + last_iteration.userinput))
+        logging.debug(f"messages: {messages}")
         return messages
 
     def build_prompt(self):
@@ -208,13 +220,17 @@ If the return code of the command is 0, the content of "check_command" will also
         return AiResponse.model_validate_json(response.choices[0].message.content)
 
     def execute_shell_command(self, command) -> subprocess.CompletedProcess[str]:
-
+        logging.info(f"Executing shell command: {command}")
         if "sudo" in command:
             if not self.sudo_password:
                 self.sudo_password = getpass.getpass("Please enter your sudo password: ")
             command = command.replace("sudo", f"echo {self.sudo_password} | sudo -S")
 
-        return subprocess.run(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, shell=True)
+        completed_process = subprocess.run(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, shell=True)
+        logging.info(f"Command executed with return code {completed_process.returncode}")
+        logging.debug(f"stdout: {completed_process.stdout}")
+        logging.debug(f"stderr: {completed_process.stderr}")
+        return completed_process
 
     def print_shell_output(self, completed_process: subprocess.CompletedProcess[str]):
         print("<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<stdout:")
