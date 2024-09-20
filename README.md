@@ -1,13 +1,51 @@
 # ai-shell-loop
 Use openAi's gpt to generate and execute bash commands quickly.
 
+Currently works only on linux based systems. You need API-Access to openAi, which you have if you have at least a plus account. 
+
+
+## Features
+
+- Generate and execute shell commands based on natural language input.
+- when the first approach fails, it tries another command
+- Iteratively refine commands to achieve desired results.
+
 ## Installation
 
+### Prerequisites
+
+Before installing `ai-shell-loop`, ensure that you have Python and `pip` installed on your system.
+
+#### Install Python and pip
+
+- On **Ubuntu/Debian**:
+
+  ```bash
+  sudo apt update
+  sudo apt install python3 python3-pip
+- On **macOS** (using Homebrew):
+
+```bash
+brew install python3
+```
+
+#### Install pipx
+If you don't have pipx installed, you can install it using pip:
+
+```bash
+python3 -m pip install --user pipx
+python3 -m pipx ensurepath
+```
+Once pipx is installed, you may need to restart your terminal or reload your shell configuration to make sure pipx is available on your PATH.
+
+### Install ai-shell-loop
 ```bash
 pipx install ai-shell-loop
 ```
 
 ### Open AI Key
+
+[Create a new api key.](https://platform.openai.com/docs/quickstart/create-and-export-an-api-key) 
 
 Set your api key with `export OPENAI_API_KEY='your-api-key'`
 
@@ -100,7 +138,7 @@ The package can only be deployed, if there are no pending changes in git and the
 
 ### Versioning
 
-Versioning is doing through git-tags.
+Versioning is done through git-tags.
 
 ```
 git tag -a v0.1.2 -m "Version 0.1.2"
