@@ -23,17 +23,27 @@ class Ai:
         self.ai_shell = ai_shell
         self.total_tokens = 0
         try:
-            # New OpenAI client initialization - compatible with newer versions
+            # Initialize the OpenAI client
             self.client = OpenAI()
         except TypeError as e:
-            # Handle case where an older version of OpenAI might be installed
-            if 'unexpected keyword argument' in str(e):
-                import openai
-                # Fall back to older initialization method if available
-                openai.api_key = os.environ.get("OPENAI_API_KEY")
-                self.client = openai
+            if "unexpected keyword argument 'proxies'" in str(e):
+                import sys
+                print("Error initializing OpenAI client: ", e)
+                print("\nThis error typically occurs due to a conflict with proxy settings.")
+                print("To resolve this issue, try one of the following solutions:")
+                print("  1. Upgrade your OpenAI package: pip install --upgrade openai")
+                print("  2. Ensure your OPENAI_API_KEY environment variable is set correctly")
+                print("  3. Clear any HTTP_PROXY or HTTPS_PROXY environment variables if not needed")
+                sys.exit(1)
             else:
-                raise
+                # For any other TypeError exceptions, use original fallback approach
+                if 'unexpected keyword argument' in str(e):
+                    import openai
+                    # Fall back to older initialization method if available
+                    openai.api_key = os.environ.get("OPENAI_API_KEY")
+                    self.client = openai
+                else:
+                    raise
 
     def call(self) -> AiResponse:
         # Check if we're using the new client (object with chat.completions) or the old module
