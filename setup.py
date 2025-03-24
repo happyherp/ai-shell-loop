@@ -18,7 +18,7 @@ setup(
         ],
     },
     install_requires=[
-        'openai==1.45.0',
+        'openai>=0.28.0,<2.0.0',  # Support both older 0.x and newer 1.x versions
         'pydantic==2.9.1',
         'PyYAML==6.0.2',
         'appdirs==1.4.4'

@@ -22,12 +22,36 @@ class Ai:
     def __init__(self, ai_shell: 'AiShell'):
         self.ai_shell = ai_shell
         self.total_tokens = 0
-        self.client = OpenAI()
+        try:
+            # New OpenAI client initialization - compatible with newer versions
+            self.client = OpenAI()
+        except TypeError as e:
+            # Handle case where an older version of OpenAI might be installed
+            if 'unexpected keyword argument' in str(e):
+                import openai
+                # Fall back to older initialization method if available
+                openai.api_key = os.environ.get("OPENAI_API_KEY")
+                self.client = openai
+            else:
+                raise
 
     def call(self) -> AiResponse:
-        response = self.client.chat.completions.create(
-            model="gpt-4-1106-preview", messages=self.build_messages(), response_format={"type": "json_object"}
-        )
+        # Check if we're using the new client (object with chat.completions) or the old module
+        if hasattr(self.client, 'chat') and hasattr(self.client.chat, 'completions'):
+            # New OpenAI client
+            response = self.client.chat.completions.create(
+                model="gpt-4-1106-preview", 
+                messages=self.build_messages(), 
+                response_format={"type": "json_object"}
+            )
+        else:
+            # Old OpenAI module
+            response = self.client.ChatCompletion.create(
+                model="gpt-4-1106-preview", 
+                messages=self.build_messages(), 
+                response_format={"type": "json_object"}
+            )
+            
         self.total_tokens += response.usage.total_tokens
         logging.info(f"Tokens: {response.usage.total_tokens}, Total: {self.total_tokens}")
         content = response.choices[0].message.content
