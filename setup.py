@@ -18,7 +18,7 @@ setup(
         ],
     },
     install_requires=[
-        'openai==1.45.0',
+        'openai==1.70.0',
         'pydantic==2.9.1',
         'PyYAML==6.0.2',
         'appdirs==1.4.4'
