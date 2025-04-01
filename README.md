@@ -1,4 +1,7 @@
 # ai-shell-loop
+
+[![PyPI version](https://badge.fury.io/py/ai-shell-loop.svg)](https://pypi.org/project/ai-shell-loop/)
+
 Use openAi's gpt to generate and execute bash commands quickly.
 
 Currently works only on linux based systems. You need API-Access to openAi, which you have if you have at least a plus account. 
@@ -119,7 +122,7 @@ python -m build
 ### Install locally
 
 ```
-pipx install dist/ai_shell_loop-0.1.0-py3-none-any.whl
+pipx install dist/ai_shell_loop-x.y.z-py3-none-any.whl
 pipx ensurepath
 ```
 After this, the `ai-do` command should be available anywhere. 
@@ -127,7 +130,7 @@ After this, the `ai-do` command should be available anywhere.
 ### Deploy to PyPi
 
 ```
-twine upload dist/ai_shell_loop-0.1.0-py3-none-any.whl -u __token__ -p your_pypi_token
+twine upload dist/ai_shell_loop-x.y.z-py3-none-any.whl -u __token__ -p your_pypi_token
 ```
 
 ##### Check that commit is tagged
