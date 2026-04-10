@@ -26,13 +26,14 @@ class Ai:
 
     def call(self) -> AiResponse:
         response = self.client.chat.completions.create(
-            model="gpt-4-1106-preview", messages=self.build_messages(), response_format={"type": "json_object"}
+            model="gpt-5.4", messages=self.build_messages(), response_format={"type": "json_object"}
         )
         self.total_tokens += response.usage.total_tokens
         logging.info(f"Tokens: {response.usage.total_tokens}, Total: {self.total_tokens}")
         content = response.choices[0].message.content
         logging.debug("Response content: " + content)
-        return AiResponse.model_validate_json(content)
+        data, _ = json.JSONDecoder().raw_decode(content.strip())
+        return AiResponse.model_validate(data)
 
     def build_messages(self):
         messages = [
